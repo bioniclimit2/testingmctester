@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Badcord</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    /* CUSTOM DARK SCROLLBARS */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #2b2d31; }
+    ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #111214; }
+
+    body {
+      font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      background-color: #313338;
+      color: #DBDEE1;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      user-select: none;
+    }
+
+    #app { display: flex; width: 100%; height: 100%; }
+
+    /* MODALS */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .auth-box {
+      background: #313338;
+      padding: 32px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+      border: 1px solid #3f4147;
+    }
+
+    .auth-box h2 { color: #FFF; text-align: center; font-size: 1.5rem; font-weight: 700; }
+    .auth-box input {
+      background: #1E1F22;
+      border: 1px solid #2B2D31;
+      color: #FFF;
+      padding: 12px 14px;
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.95rem;
+      transition: border 0.2s;
+    }
+    .auth-box input:focus { border-color: #5865F2; }
+
+    .auth-box button {
+      background: #5865F2;
+      color: #FFF;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .auth-box button:hover { background: #4752C4; }
+    .auth-toggle { color: #949BA4; text-align: center; font-size: 0.85rem; cursor: pointer; margin-top: 4px; }
+    .auth-toggle:hover { color: #FFF; text-decoration: underline; }
+
+    .friend-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #2B2D31;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .friend-checkbox-item:hover { background: #35373C; }
+
+    /* SERVER SIDEBAR */
+    .server-sidebar {
+      width: 72px;
+      background-color: #1E1F22;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 12px;
+      gap: 8px;
+    }
+
+    .server-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .server-pill {
+      position: absolute;
+      left: 0;
+      width: 4px;
+      height: 0px;
+      background-color: #FFF;
+      border-radius: 0 4px 4px 0;
+      transition: all 0.2s ease;
+    }
+
+    .server-wrapper:hover .server-pill { height: 20px; }
+    .server-wrapper.active .server-pill { height: 40px; }
+
+    .server-icon {
+      width: 48px;
+      height: 48px;
+      background-color: #313338;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #DBDEE1;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .server-icon:hover, .server-wrapper.active .server-icon {
+      border-radius: 16px;
+      background-color: #5865F2;
+      color: white;
+    }
+
+    .home-btn { background-color: #313338; color: #DBDEE1; }
+    .home-btn:hover, .home-btn.active { background-color: #5865F2; color: #FFF; }
+    
+    .add-server-btn { background-color: #313338; color: #23A55A; }
+    .add-server-btn:hover { background-color: #23A55A !important; color: white !important; }
+
+    .divider { width: 32px; height: 2px; background-color: #35363C; border-radius: 1px; margin: 4px 0; }
+
+    /* CHANNEL SIDEBAR */
+    .channel-sidebar {
+      width: 240px;
+      background-color: #2B2D31;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .server-header {
+      height: 48px;
+      padding: 0 16px;
+      border-bottom: 1px solid #1F2023;
+      font-weight: 700;
+      color: #F2F3F5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .add-channel-btn {
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #949BA4;
+      transition: color 0.15s;
+    }
+    .add-channel-btn:hover { color: #FFF; }
+
+    .channel-list { flex: 1; padding: 12px 8px; overflow-y: auto; }
+
+    .channel-item {
+      padding: 8px 12px;
+      margin-bottom: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #949BA4;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .channel-item:hover { background-color: #35373C; color: #DBDEE1; }
+    .channel-item.active { background-color: #404249; color: #FFF; }
+
+    /* USER PROFILE FOOTER */
+    .user-area {
+      height: 52px;
+      background-color: #232428;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #5865F2, #7289da);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; color: #FFF; font-size: 0.85rem;
+    }
+
+    .user-info { flex: 1; overflow: hidden; }
+    .user-name { font-size: 0.9rem; font-weight: 600; color: #F2F3F5; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .logout-btn { background: none; border: none; color: #F23F43; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+    .logout-btn:hover { text-decoration: underline; }
+
+    /* MAIN VIEW AREA */
+    .main-view { flex: 1; display: flex; flex-direction: column; background-color: #313338; }
+
+    /* CHAT VIEW */
+    .chat-header {
+      height: 48px;
+      padding: 0 16px;
+      border-bottom: 1px solid #2B2D31;
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      color: #FFF;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .messages-container {
+      flex: 1;
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* MESSAGE ROW & HOVER ACTION BAR */
+    .message {
+      position: relative;
+      display: flex;
+      gap: 16px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background 0.1s ease;
+    }
+    .message:hover { background-color: #2e3035; }
+
+    .msg-actions-bar {
+      position: absolute;
+      top: -12px;
+      right: 16px;
+      background: #313338;
+      border: 1px solid #2B2D31;
+      border-radius: 6px;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+    .message:hover .msg-actions-bar { display: flex; }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: #B5BAC1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+    }
+    .action-btn:hover { background: #35373C; color: #FFF; }
+
+    .msg-avatar {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #5865F2, #eb459e);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; color: #FFF; font-size: 1rem;
+    }
+
+    .msg-content { display: flex; flex-direction: column; flex: 1; }
+    .msg-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+    .msg-author { color: #FFF; font-weight: 600; font-size: 0.95rem; }
+    .msg-time { color: #949BA4; font-size: 0.75rem; }
+    .msg-edited { color: #949BA4; font-size: 0.7rem; font-style: italic; }
+    .msg-text { color: #DBDEE1; line-height: 1.375rem; font-size: 0.95rem; user-select: text; }
+
+    /* REACTION PILLS */
+    .reactions-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .reaction-pill {
+      background: #2B2D31;
+      border: 1px solid #35373C;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: #B5BAC1;
+      transition: all 0.15s ease;
+    }
+    .reaction-pill:hover { background: #35373C; color: #FFF; }
+    .reaction-pill.active { background: rgba(88, 101, 242, 0.15); border-color: #5865F2; color: #5865F2; }
+
+    .input-area { padding: 0 16px 24px 16px; }
+    .input-box {
+      background-color: #383A40;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .input-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #DBDEE1;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    /* FRIENDS VIEW */
+    .friends-view {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .friends-header-title { font-size: 1.2rem; font-weight: 700; color: #FFF; }
+    .add-friend-box { display: flex; gap: 12px; }
+    .add-friend-box input {
+      flex: 1;
+      max-width: 400px;
+      background: #1E1F22;
+      border: 1px solid #2B2D31;
+      color: #FFF;
+      padding: 10px 14px;
+      border-radius: 6px;
+      outline: none;
+    }
+    .add-friend-box button {
+      background: #5865F2;
+      color: #FFF;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .friend-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .friend-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2B2D31;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #35373c;
+    }
+    .friend-card button {
+      background: #23A55A;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .friend-card button:hover { background: #1d8a4b; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-box">
+      <h2 id="auth-title">Welcome Back!</h2>
+      <input type="text" id="auth-username" placeholder="Username" required />
+      <input type="email" id="auth-email" placeholder="Email" required />
+      <input type="password" id="auth-password" placeholder="Password" required />
+      <button id="auth-submit-btn">Log In</button>
+      <div class="auth-toggle" id="auth-toggle-btn">Need an account? Register</div>
+    </div>
+  </div>
+
+  <div class="auth-overlay" id="server-modal" style="display: none;">
+    <div class="auth-box">
+      <h2>Create a Server</h2>
+      <input type="text" id="new-server-name" placeholder="Server Name" required />
+      
+      <div style="font-size: 0.85rem; color: #949BA4; font-weight: 600;">INVITE FRIENDS:</div>
+      <div id="friend-checkboxes" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+
+      <button id="confirm-create-server-btn">Create Server</button>
+      <div class="auth-toggle" id="cancel-server-btn">Cancel</div>
+    </div>
+  </div>
+
+  <div class="auth-overlay" id="channel-modal" style="display: none;">
+    <div class="auth-box">
+      <h2>Create Text Channel</h2>
+      <input type="text" id="new-channel-name" placeholder="e.g. memes, gaming, off-topic" required />
+      <button id="confirm-create-channel-btn">Create Channel</button>
+      <div class="auth-toggle" id="cancel-channel-btn">Cancel</div>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="server-sidebar" id="server-list">
+      <div class="server-wrapper active" id="home-wrapper">
+        <div class="server-pill"></div>
+        <div class="server-icon home-btn" id="home-btn" title="Direct Messages">D</div>
+      </div>
+      <div class="divider"></div>
+      <div class="server-icon add-server-btn" id="add-server-btn" title="Create Server">+</div>
+    </div>
+
+    <div class="channel-sidebar">
+      <div class="server-header">
+        <span id="server-name">Direct Messages</span>
+        <span class="add-channel-btn" id="add-channel-btn" style="display: none;" title="Create Channel">+</span>
+      </div>
+      <div class="channel-list" id="channel-list"></div>
+      <div class="user-area">
+        <div class="avatar" id="current-user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="current-username">Guest</div>
+        </div>
+        <button class="logout-btn" id="logout-btn">Log Out</button>
+      </div>
+    </div>
+
+    <div class="main-view">
+      <div id="chat-section" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="chat-header" id="chat-header"># general</div>
+        <div class="messages-container" id="messages"></div>
+        <div class="input-area">
+          <form class="input-box" id="chat-form">
+            <span style="color: #B5BAC1; font-weight: bold;">+</span>
+            <input type="text" id="message-input" placeholder="Message #general" autocomplete="off" required />
+          </form>
+        </div>
+      </div>
+
+      <div class="friends-view" id="friends-section">
+        <div class="friends-header-title">Add Friends</div>
+        
+        <div class="add-friend-box">
+          <input type="text" id="friend-username-input" placeholder="Enter a Username to add..." />
+          <button id="send-friend-btn">Send Friend Request</button>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <h3 style="font-size: 0.8rem; font-weight: 700; color: #949BA4; margin-bottom: 8px;">PENDING REQUESTS & FRIENDS</h3>
+          <div class="friend-list" id="friend-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://yrvelisfwuyvtbneaiun.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlydmVsaXNmd3V5dnRibmVhaXVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MjA4MDgsImV4cCI6MjEwMjA5NjgwOH0.Ycdmm0nbx0Txya3F1llY3fnPLTkWf0OG2tISmJ8tPK8';
+
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // App State
+    let currentUser = null;
+    let currentUsername = '';
+    let activeServerId = null;
+    let activeChannelId = null;
+    let activeDMUser = null;
+    let isSignUpMode = false;
+    let realtimeChannel = null;
+
+    // DOM Elements
+    const authOverlay = document.getElementById('auth-overlay');
+    const authTitle = document.getElementById('auth-title');
+    const authUsernameInput = document.getElementById('auth-username');
+    const authEmailInput = document.getElementById('auth-email');
+    const authPasswordInput = document.getElementById('auth-password');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const authToggleBtn = document.getElementById('auth-toggle-btn');
+    
+    const serverModal = document.getElementById('server-modal');
+    const newServerNameInput = document.getElementById('new-server-name');
+    const friendCheckboxes = document.getElementById('friend-checkboxes');
+    const confirmCreateServerBtn = document.getElementById('confirm-create-server-btn');
+    const cancelServerBtn = document.getElementById('cancel-server-btn');
+
+    const channelModal = document.getElementById('channel-modal');
+    const newChannelNameInput = document.getElementById('new-channel-name');
+    const confirmCreateChannelBtn = document.getElementById('confirm-create-channel-btn');
+    const cancelChannelBtn = document.getElementById('cancel-channel-btn');
+    const addChannelBtn = document.getElementById('add-channel-btn');
+
+    const serverList = document.getElementById('server-list');
+    const homeBtn = document.getElementById('home-btn');
+    const homeWrapper = document.getElementById('home-wrapper');
+    const addServerBtn = document.getElementById('add-server-btn');
+    const channelList = document.getElementById('channel-list');
+    const serverNameHeader = document.getElementById('server-name');
+    const messagesContainer = document.getElementById('messages');
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = document.getElementById('message-input');
+    const chatHeader = document.getElementById('chat-header');
+    const currentUsernameDisplay = document.getElementById('current-username');
+    const currentUserAvatar = document.getElementById('current-user-avatar');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    const chatSection = document.getElementById('chat-section');
+    const friendsSection = document.getElementById('friends-section');
+    const friendUsernameInput = document.getElementById('friend-username-input');
+    const sendFriendBtn = document.getElementById('send-friend-btn');
+    const friendListContainer = document.getElementById('friend-list');
+
+    // AUTH MANAGEMENT
+    authToggleBtn.addEventListener('click', () => {
+      isSignUpMode = !isSignUpMode;
+      authTitle.textContent = isSignUpMode ? 'Create Account' : 'Welcome Back!';
+      authSubmitBtn.textContent = isSignUpMode ? 'Sign Up' : 'Log In';
+      authToggleBtn.textContent = isSignUpMode ? 'Already have an account? Log In' : 'Need an account? Register';
+    });
+
+    authSubmitBtn.addEventListener('click', async () => {
+      const email = authEmailInput.value.trim();
+      const password = authPasswordInput.value.trim();
+      const username = authUsernameInput.value.trim();
+
+      if (!email || !password) return alert('Please enter email and password.');
+
+      if (isSignUpMode) {
+        if (!username) return alert('Please enter a username.');
+        const { data, error } = await db.auth.signUp({
+          email,
+          password,
+          options: { data: { username } }
+        });
+        if (error) alert(error.message);
+        else alert('Account created! Logging you in...');
+      } else {
+        const { data, error } = await db.auth.signInWithPassword({ email, password });
+        if (error) alert(error.message);
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => db.auth.signOut());
+
+    db.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        currentUser = session.user;
+        currentUsername = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
+        currentUsernameDisplay.textContent = currentUsername;
+        currentUserAvatar.textContent = currentUsername.charAt(0).toUpperCase();
+        authOverlay.style.display = 'none';
+        loadServers();
+      } else {
+        currentUser = null;
+        authOverlay.style.display = 'flex';
+      }
+    });
+
+    // DIRECT MESSAGES & FRIENDS NAVIGATION
+    homeBtn.addEventListener('click', () => {
+      clearChatScreen();
+      activeServerId = null;
+      activeChannelId = null;
+      addChannelBtn.style.display = 'none';
+      
+      document.querySelectorAll('.server-wrapper').forEach(w => w.classList.remove('active'));
+      homeWrapper.classList.add('active');
+
+      serverNameHeader.textContent = 'Direct Messages';
+      loadDMSidebar();
+    });
+
+    async function loadDMSidebar() {
+      const { data: friendsData } = await db.from('friends')
+        .select('*')
+        .or(`sender_username.eq.${currentUsername},receiver_username.eq.${currentUsername}`);
+
+      channelList.innerHTML = '';
+
+      const addFriendBtn = document.createElement('div');
+      addFriendBtn.className = 'channel-item';
+      addFriendBtn.innerHTML = '<span style="font-size:1.1rem; font-weight:bold;">+</span> <b>Add Friends</b>';
+      addFriendBtn.onclick = () => {
+        chatSection.style.display = 'none';
+        friendsSection.style.display = 'flex';
+        loadFriendsRequests();
+      };
+      channelList.appendChild(addFriendBtn);
+
+      const acceptedFriends = [];
+      if (friendsData) {
+        friendsData.forEach(item => {
+          if (item.status === 'accepted') {
+            const friendName = item.sender_username === currentUsername ? item.receiver_username : item.sender_username;
+            acceptedFriends.push(friendName);
+          }
+        });
+      }
+
+      acceptedFriends.forEach(friendName => {
+        const item = document.createElement('div');
+        item.className = 'channel-item' + (activeDMUser === friendName ? ' active' : '');
+        item.innerHTML = `<span style="color:#949BA4;">@</span> ${escapeHtml(friendName)}`;
+        item.onclick = () => selectDMUser(friendName);
+        channelList.appendChild(item);
+      });
+
+      if (acceptedFriends.length > 0 && !activeDMUser) {
+        selectDMUser(acceptedFriends[0]);
+      } else if (acceptedFriends.length === 0) {
+        chatSection.style.display = 'none';
+        friendsSection.style.display = 'flex';
+        loadFriendsRequests();
+      }
+    }
+
+    async function selectDMUser(friendUsername) {
+      clearChatScreen();
+      activeDMUser = friendUsername;
+      activeChannelId = null;
+      chatSection.style.display = 'flex';
+      friendsSection.style.display = 'none';
+
+      chatHeader.textContent = `@ ${friendUsername}`;
+      messageInput.placeholder = `Message @${friendUsername}`;
+
+      Array.from(channelList.children).forEach(el => {
+        el.classList.toggle('active', el.textContent.includes(friendUsername));
+      });
+
+      fetchMessages();
+
+      if (realtimeChannel) db.removeChannel(realtimeChannel);
+      realtimeChannel = db.channel(`dm:${currentUsername}-${activeDMUser}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => fetchMessages())
+        .subscribe();
+    }
+
+    // SERVER & CHANNEL LOGIC
+    async function loadServers() {
+      const { data: memberships } = await db.from('server_members').select('server_id').eq('username', currentUsername);
+      
+      document.querySelectorAll('.dynamic-server-wrapper').forEach(el => el.remove());
+
+      if (memberships && memberships.length > 0) {
+        const serverIds = memberships.map(m => m.server_id);
+        const { data: servers } = await db.from('servers').select('*').in('id', serverIds).order('created_at', { ascending: true });
+
+        if (servers) {
+          servers.forEach(server => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'server-wrapper dynamic-server-wrapper' + (server.id === activeServerId ? ' active' : '');
+            
+            wrapper.innerHTML = `
+              <div class="server-pill"></div>
+              <div class="server-icon">${server.name.charAt(0).toUpperCase()}</div>
+            `;
+
+            wrapper.onclick = () => selectServer(server, wrapper);
+            serverList.insertBefore(wrapper, addServerBtn);
+          });
+
+          if (!activeServerId && !activeDMUser && servers.length > 0) {
+            const firstServerWrapper = document.querySelector('.dynamic-server-wrapper');
+            selectServer(servers[0], firstServerWrapper);
+          }
+        }
+      }
+    }
+
+    async function selectServer(server, wrapperEl) {
+      clearChatScreen();
+      activeDMUser = null;
+      chatSection.style.display = 'flex';
+      friendsSection.style.display = 'none';
+
+      activeServerId = server.id;
+      serverNameHeader.textContent = server.name;
+      addChannelBtn.style.display = 'block';
+
+      document.querySelectorAll('.server-wrapper').forEach(w => w.classList.remove('active'));
+      if (wrapperEl) wrapperEl.classList.add('active');
+
+      loadChannelsForServer();
+    }
+
+    async function loadChannelsForServer() {
+      const { data: channels } = await db.from('channels').select('*').eq('server_id', activeServerId).order('created_at', { ascending: true });
+      channelList.innerHTML = '';
+
+      if (channels && channels.length > 0) {
+        channels.forEach(ch => {
+          const chDiv = document.createElement('div');
+          chDiv.className = 'channel-item' + (ch.id === activeChannelId ? ' active' : '');
+          chDiv.innerHTML = `<span style="color:#949BA4;">#</span> ${ch.name}`;
+          chDiv.onclick = () => selectChannel(ch);
+          channelList.appendChild(chDiv);
+        });
+
+        const targetCh = channels.find(c => c.id === activeChannelId) || channels[0];
+        selectChannel(targetCh);
+      }
+    }
+
+    async function selectChannel(channel) {
+      clearChatScreen();
+      activeChannelId = channel.id;
+      chatHeader.textContent = `# ${channel.name}`;
+      messageInput.placeholder = `Message #${channel.name}`;
+
+      Array.from(channelList.children).forEach(el => {
+        el.classList.toggle('active', el.textContent.includes(channel.name));
+      });
+
+      fetchMessages();
+
+      if (realtimeChannel) db.removeChannel(realtimeChannel);
+      realtimeChannel = db.channel(`channel:${activeChannelId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `channel_id=eq.${activeChannelId}` }, () => fetchMessages())
+        .subscribe();
+    }
+
+    function clearChatScreen() {
+      messagesContainer.innerHTML = '';
+    }
+
+    // CREATE CHANNEL MODAL HANDLERS
+    addChannelBtn.addEventListener('click', () => {
+      channelModal.style.display = 'flex';
+    });
+
+    cancelChannelBtn.addEventListener('click', () => {
+      channelModal.style.display = 'none';
+    });
+
+    confirmCreateChannelBtn.addEventListener('click', async () => {
+      const name = newChannelNameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
+      if (!name) return alert('Please enter a channel name.');
+
+      const { data, error } = await db.from('channels').insert([{
+        server_id: activeServerId,
+        name: name
+      }]).select().single();
+
+      if (error) alert(error.message);
+      else {
+        channelModal.style.display = 'none';
+        newChannelNameInput.value = '';
+        loadChannelsForServer();
+      }
+    });
+
+    // CREATE SERVER MODAL HANDLERS
+    addServerBtn.addEventListener('click', async () => {
+      const { data: friendsData } = await db.from('friends')
+        .select('*')
+        .or(`sender_username.eq.${currentUsername},receiver_username.eq.${currentUsername}`);
+
+      friendCheckboxes.innerHTML = '';
+      let hasFriends = false;
+
+      if (friendsData) {
+        friendsData.forEach(item => {
+          if (item.status === 'accepted') {
+            hasFriends = true;
+            const friendName = item.sender_username === currentUsername ? item.receiver_username : item.sender_username;
+            const label = document.createElement('label');
+            label.className = 'friend-checkbox-item';
+            label.innerHTML = `<input type="checkbox" value="${friendName}" /> @${friendName}`;
+            friendCheckboxes.appendChild(label);
+          }
+        });
+      }
+
+      if (!hasFriends) {
+        friendCheckboxes.innerHTML = '<div style="font-size:0.85rem; color:#949BA4;">No friends added yet.</div>';
+      }
+
+      serverModal.style.display = 'flex';
+    });
+
+    cancelServerBtn.addEventListener('click', () => {
+      serverModal.style.display = 'none';
+    });
+
+    confirmCreateServerBtn.addEventListener('click', async () => {
+      const serverName = newServerNameInput.value.trim();
+      if (!serverName) return alert('Please enter a server name.');
+
+      const { data: server, error: sErr } = await db.from('servers').insert([{ name: serverName }]).select().single();
+      if (sErr) return alert(sErr.message);
+
+      await db.from('channels').insert([{ server_id: server.id, name: 'general' }]);
+
+      const checkedBoxes = friendCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
+      const membersToAdd = [{ server_id: server.id, username: currentUsername }];
+
+      checkedBoxes.forEach(cb => {
+        membersToAdd.push({ server_id: server.id, username: cb.value });
+      });
+
+      await db.from('server_members').insert(membersToAdd);
+
+      serverModal.style.display = 'none';
+      newServerNameInput.value = '';
+      loadServers();
+    });
+
+    // FRIENDS MANAGEMENT
+    sendFriendBtn.addEventListener('click', async () => {
+      const targetUser = friendUsernameInput.value.trim();
+      if (!targetUser) return;
+      if (targetUser === currentUsername) return alert("You can't add yourself!");
+
+      const { error } = await db.from('friends').insert([{
+        sender_username: currentUsername,
+        receiver_username: targetUser,
+        status: 'pending'
+      }]);
+
+      if (error) alert(error.message);
+      else {
+        alert(`Friend request sent to @${targetUser}!`);
+        friendUsernameInput.value = '';
+        loadFriendsRequests();
+      }
+    });
+
+    async function loadFriendsRequests() {
+      const { data: friendsData } = await db.from('friends')
+        .select('*')
+        .or(`sender_username.eq.${currentUsername},receiver_username.eq.${currentUsername}`);
+
+      friendListContainer.innerHTML = '';
+
+      if (!friendsData || friendsData.length === 0) {
+        friendListContainer.innerHTML = '<div style="color: #949BA4;">No requests yet. Send a request above!</div>';
+        return;
+      }
+
+      friendsData.forEach(item => {
+        const isSender = item.sender_username === currentUsername;
+        const friendName = isSender ? item.receiver_username : item.sender_username;
+        
+        const card = document.createElement('div');
+        card.className = 'friend-card';
+
+        if (item.status === 'accepted') {
+          card.innerHTML = `<span>@${escapeHtml(friendName)}</span> <span style="color: #23A55A; font-size: 0.85rem; font-weight:bold;">Friends</span>`;
+        } else if (isSender) {
+          card.innerHTML = `<span>@${escapeHtml(friendName)}</span> <span style="color: #949BA4; font-size: 0.85rem;">Pending...</span>`;
+        } else {
+          card.innerHTML = `
+            <span>@${escapeHtml(friendName)} sent you a request</span>
+            <button onclick="acceptFriend('${item.id}')">Accept Request</button>
+          `;
+        }
+
+        friendListContainer.appendChild(card);
+      });
+    }
+
+    window.acceptFriend = async function(id) {
+      await db.from('friends').update({ status: 'accepted' }).eq('id', id);
+      loadFriendsRequests();
+    };
+
+    // FETCH MESSAGES & RENDER CHAT
+    async function fetchMessages() {
+      let data = [];
+
+      if (activeDMUser) {
+        const res = await db.from('direct_messages')
+          .select('*')
+          .or(`and(sender_username.eq.${currentUsername},receiver_username.eq.${activeDMUser}),and(sender_username.eq.${activeDMUser},receiver_username.eq.${currentUsername})`)
+          .order('created_at', { ascending: true });
+        data = res.data || [];
+      } else if (activeChannelId) {
+        const res = await db.from('messages')
+          .select('*')
+          .eq('channel_id', activeChannelId)
+          .order('created_at', { ascending: true });
+        data = res.data || [];
+      }
+
+      messagesContainer.innerHTML = '';
+      data.forEach(msg => renderMessage(msg));
+    }
+
+    setInterval(() => {
+      if (activeChannelId || activeDMUser) fetchMessages();
+    }, 3000);
+
+    function renderMessage(msg) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message';
+      const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const authorName = msg.user_name || msg.sender_username;
+      const initial = authorName.charAt(0).toUpperCase();
+      const isOwner = authorName === currentUsername;
+      
+      // Safely encode string content to avoid broken HTML attributes
+      const encodedMsgContent = encodeURIComponent(msg.content);
+
+      // Message Actions Bar (Emojis + Edit / Delete)
+      let actionsHTML = `
+        <div class="msg-actions-bar">
+          <button class="action-btn" onclick="addReaction('${msg.id}', '👍')">👍</button>
+          <button class="action-btn" onclick="addReaction('${msg.id}', '❤️')">❤️</button>
+          <button class="action-btn" onclick="addReaction('${msg.id}', '😂')">😂</button>
+          <button class="action-btn" onclick="addReaction('${msg.id}', '🔥')">🔥</button>
+      `;
+
+      if (isOwner) {
+        actionsHTML += `
+          <button class="action-btn" title="Edit Message" onclick="editMessage('${msg.id}', '${encodedMsgContent}')">✏️</button>
+          <button class="action-btn" title="Delete Message" onclick="deleteMessage('${msg.id}')">🗑️</button>
+        `;
+      }
+      actionsHTML += `</div>`;
+
+      // Reactions Pills HTML
+      let reactionsHTML = `<div class="reactions-container">`;
+      const reactionsObj = msg.reactions || {};
+      
+      Object.keys(reactionsObj).forEach(emoji => {
+        const usersArray = reactionsObj[emoji] || [];
+        if (usersArray.length > 0) {
+          const hasReacted = usersArray.includes(currentUsername);
+          reactionsHTML += `
+            <div class="reaction-pill ${hasReacted ? 'active' : ''}" onclick="addReaction('${msg.id}', '${emoji}')">
+              <span>${emoji}</span> <span>${usersArray.length}</span>
+            </div>
+          `;
+        }
+      });
+      reactionsHTML += `</div>`;
+
+      msgDiv.innerHTML = `
+        ${actionsHTML}
+        <div class="msg-avatar">${initial}</div>
+        <div class="msg-content">
+          <div class="msg-header">
+            <span class="msg-author">${escapeHtml(authorName)}</span>
+            <span class="msg-time">${time}</span>
+            ${msg.is_edited ? '<span class="msg-edited">(edited)</span>' : ''}
+          </div>
+          <div class="msg-text">${escapeHtml(msg.content)}</div>
+          ${reactionsHTML}
+        </div>
+      `;
+
+      messagesContainer.appendChild(msgDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // EMOJI REACTION LOGIC
+    window.addReaction = async function(msgId, emoji) {
+      const table = activeDMUser ? 'direct_messages' : 'messages';
+      
+      const { data: msg, error: fetchErr } = await db.from(table).select('reactions').eq('id', msgId).single();
+      if (fetchErr) return console.error('Reaction fetch error:', fetchErr.message);
+
+      let reactions = msg?.reactions || {};
+      if (typeof reactions !== 'object' || reactions === null) reactions = {};
+
+      if (!reactions[emoji] || !Array.isArray(reactions[emoji])) {
+        reactions[emoji] = [];
+      }
+
+      // Toggle user reaction on/off
+      if (reactions[emoji].includes(currentUsername)) {
+        reactions[emoji] = reactions[emoji].filter(u => u !== currentUsername);
+      } else {
+        reactions[emoji].push(currentUsername);
+      }
+
+      const { error: updateErr } = await db.from(table).update({ reactions }).eq('id', msgId);
+      if (updateErr) alert('Reaction error: ' + updateErr.message);
+      else fetchMessages();
+    };
+
+    // EDIT MESSAGE LOGIC
+    window.editMessage = async function(msgId, encodedContent) {
+      const currentText = decodeURIComponent(encodedContent);
+      const newText = prompt('Edit your message:', currentText);
+      if (!newText || newText.trim() === '' || newText === currentText) return;
+
+      const table = activeDMUser ? 'direct_messages' : 'messages';
+      const { error } = await db.from(table).update({ 
+        content: newText.trim(),
+        is_edited: true 
+      }).eq('id', msgId);
+
+      if (error) alert('Edit error: ' + error.message);
+      else fetchMessages();
+    };
+
+    // DELETE MESSAGE LOGIC
+    window.deleteMessage = async function(msgId) {
+      if (!confirm('Are you sure you want to delete this message?')) return;
+
+      const table = activeDMUser ? 'direct_messages' : 'messages';
+      const { error } = await db.from(table).delete().eq('id', msgId);
+
+      if (error) alert('Delete error: ' + error.message);
+      else fetchMessages();
+    };
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || !currentUser) return;
+
+      messageInput.value = '';
+
+      if (activeDMUser) {
+        await db.from('direct_messages').insert([{ 
+          sender_username: currentUsername,
+          receiver_username: activeDMUser, 
+          content: text 
+        }]);
+      } else if (activeChannelId) {
+        await db.from('messages').insert([{ 
+          channel_id: activeChannelId,
+          user_name: currentUsername, 
+          content: text 
+        }]);
+      }
+
+      fetchMessages();
+    });
+  </script>
+</body>
+</html>
