@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     :root {
       --bg: #0a0b0e;
@@ -30,7 +33,6 @@
       font-family: 'Inter', sans-serif;
       line-height: 1.6; 
       min-height: 100vh; 
-      /* Subtle subtle background grid pattern */
       background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
       background-size: 24px 24px;
     }
@@ -57,6 +59,8 @@
     }
     .logo span { color: var(--accent); }
 
+    nav { display: flex; align-items: center; }
+
     nav a { 
       color: var(--muted); 
       text-decoration: none; 
@@ -64,6 +68,8 @@
       font-size: 0.95rem;
       font-weight: 500; 
       transition: color 0.15s ease; 
+      display: flex;
+      align-items: center;
     }
     nav a:hover { color: #fff; }
 
@@ -105,7 +111,7 @@
       margin-bottom: 35px; 
     }
 
-    /* Console-style IP Widget */
+    /* IP Widget */
     .ip-container {
       display: flex;
       flex-direction: column;
@@ -164,12 +170,12 @@
       border-radius: 50%; 
     }
 
-    /* Features Section */
+    /* Features Grid */
     .features { 
       display: grid; 
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
       gap: 20px; 
-      padding: 60px 8% 80px; 
+      padding: 60px 8% 40px; 
       max-width: 1200px;
       margin: 0 auto;
     }
@@ -208,6 +214,63 @@
       font-size: 0.95rem;
     }
 
+    /* News Section */
+    .news-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 8% 80px;
+    }
+
+    .news-section h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      color: #fff;
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+    }
+
+    /* Secret Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 30px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .modal h2 { font-family: 'Space Grotesk', sans-serif; color: #fff; }
+    
+    .modal input, .modal textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    
+    .modal textarea { resize: vertical; min-height: 100px; }
+
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+    
+    .btn-submit { background: var(--accent); color: #fff; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; font-weight: 600; }
+    .btn-cancel { background: var(--border); color: var(--text); border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; }
+
     /* Footer */
     footer { 
       text-align: center; 
@@ -223,15 +286,22 @@
   <header>
     <div class="logo">LIMITLESS<span>SMP</span></div>
     <nav>
-      <a href="#features">Features</a>
       <a href="https://discord.gg/rCXt759sUZ" target="_blank">Discord</a>
+      <img 
+        src="https://www.freeiconspng.com/uploads/cheese-images-7.png" 
+        id="cheese-img" 
+        width="30" 
+        alt="Cheese" 
+        style="cursor: pointer; margin-left: 24px;" 
+        title="Secret Cheese"
+      />
     </nav>
   </header>
 
   <section class="hero">
     <div class="badge">Minecraft Survival</div>
     <h1>LimitlessSMP</h1>
-    <p>Experience custom mechanics, uncapped skills, and a community built around active gameplay with zero pay-to-win mechanics!</p>
+    <p>Experience custom commands, and a community built around active gameplay with zero pay-to-win mechanics!</p>
 
     <!-- IP Copy Box -->
     <div class="ip-container">
@@ -247,10 +317,11 @@
     </div>
   </section>
 
+  <!-- Features Grid -->
   <section class="features" id="features">
     <div class="card">
-          <div class="card-tag">World Generation </div>
-      <h3>Introducing Terralith
+      <div class="card-tag">World Generation</div>
+      <h3>Introducing Terralith</h3>
       <p>Exploring Never Ends With Terralith! Explore Incredible Worlds That You've Never Seen Before!</p>
     </div>
 
@@ -261,43 +332,168 @@
     </div>
   </section>
 
+  <!-- Live Patch Notes / Updates Section -->
+  <section class="news-section">
+    <h2>Patch Notes & Announcements</h2>
+    <div class="features" id="news-grid" style="padding: 0;">
+      <p style="color: var(--muted);">Loading latest updates...</p>
+    </div>
+  </section>
+
+  <!-- Secret Cheese Admin Modal -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal">
+      <h2>🧀 Admin News Publisher</h2>
+      <input type="password" id="admin-pass" placeholder="Secret Admin Password..." />
+      <input type="text" id="post-title" placeholder="Patch Note Title" />
+      <input type="text" id="post-category" placeholder="Category (e.g. Update, World, Fix)" />
+      <textarea id="post-content" placeholder="Write post description here..."></textarea>
+      
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-submit" onclick="publishNews()">Publish</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     &copy; 2026 LimitlessSMP. Not affiliated with Mojang Studios.
   </footer>
 
- <script>
-  const SERVER_IP = "51.161.198.228:50122";
+  <script>
+    // 1. Supabase Connection Configuration
+    const SUPABASE_URL = "https://sczdsjcgmkzzvcbjjhbe.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjemRzamNnbWt6enZjYmpqaGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NDA5NzMsImV4cCI6MjEwNTExNjk3M30.zzcPes0qxlwn35D17wz86yfqP0GArnGqWqPD4LmQW5Q";
+    
+    // Initialized using unique client name to prevent script crash
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  function copyIP() {
-    navigator.clipboard.writeText(SERVER_IP);
-    const btn = document.getElementById("copy-btn");
-    btn.innerText = "Copied!";
-    setTimeout(() => { btn.innerText = "Copy IP"; }, 2000);
-  }
+    // Change this password anytime to protect publishing
+    const ADMIN_PASSWORD = "limitlessadmin"; 
+    const SERVER_IP = "51.161.198.228:50122";
 
-  async function fetchServerStatus() {
-    const countElem = document.getElementById("player-count");
-    const dotElem = document.getElementById("dot");
-
-    try {
-      // Switched to mcstatus.io for better custom port support
-      const res = await fetch(`https://api.mcstatus.io/v2/status/java/${SERVER_IP}`);
-      const data = await res.json();
-
-      if (data.online) {
-        countElem.innerText = `Online — ${data.players.online}/${data.players.max} Players`;
-        dotElem.style.backgroundColor = "var(--accent-green)";
-      } else {
-        countElem.innerText = "Offline: Probably an Update";
-        dotElem.style.backgroundColor = "#ef4444";
-      }
-    } catch (err) {
-      countElem.innerText = "Join now on Java";
-      dotElem.style.backgroundColor = "var(--muted)";
+    // IP Copy Function
+    function copyIP() {
+      navigator.clipboard.writeText(SERVER_IP);
+      const btn = document.getElementById("copy-btn");
+      btn.innerText = "Copied!";
+      setTimeout(() => { btn.innerText = "Copy IP"; }, 2000);
     }
-  }
 
-  fetchServerStatus();
-</script>
+    // Live Server Status fetch via mcstatus.io
+    async function fetchServerStatus() {
+      const countElem = document.getElementById("player-count");
+      const dotElem = document.getElementById("dot");
+
+      try {
+        const res = await fetch(`https://api.mcstatus.io/v2/status/java/${SERVER_IP}`);
+        const data = await res.json();
+
+        if (data.online) {
+          countElem.innerText = `Online — ${data.players.online}/${data.players.max} Players`;
+          dotElem.style.backgroundColor = "var(--accent-green)";
+        } else {
+          countElem.innerText = "Offline: Probably an Update";
+          dotElem.style.backgroundColor = "#ef4444";
+        }
+      } catch (err) {
+        countElem.innerText = "Join now on Java";
+        dotElem.style.backgroundColor = "var(--muted)";
+      }
+    }
+
+    // Load Announcements from Supabase
+    async function loadNews() {
+      const newsGrid = document.getElementById("news-grid");
+      
+      try {
+        const { data: posts, error } = await supabaseClient
+          .from('announcements')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error || !posts || posts.length === 0) {
+          newsGrid.innerHTML = `
+            <div class="card">
+              <div class="card-tag">Welcome</div>
+              <h3>Server Launched!</h3>
+              <p>Welcome to LimitlessSMP. Check back here for future patch notes and feature updates!</p>
+            </div>
+          `;
+          return;
+        }
+
+        newsGrid.innerHTML = posts.map(post => `
+          <div class="card">
+            <div class="card-tag">${post.category || 'Update'}</div>
+            <h3>${post.title}</h3>
+            <p>${post.content}</p>
+            <small style="color: var(--muted); display: block; margin-top: 15px; font-family: monospace;">
+              ${new Date(post.created_at).toLocaleDateString()}
+            </small>
+          </div>
+        `).join('');
+      } catch (err) {
+        newsGrid.innerHTML = `<p style="color: var(--muted);">Unable to load patch notes.</p>`;
+      }
+    }
+
+    // 5-Click Cheese Easter Egg Listener
+    let cheeseClicks = 0;
+    const cheeseImg = document.getElementById('cheese-img');
+
+    if (cheeseImg) {
+      cheeseImg.addEventListener('click', () => {
+        cheeseClicks++;
+        
+        if (cheeseClicks === 5) {
+          cheeseClicks = 0;
+          document.getElementById("admin-modal").style.display = "flex";
+        }
+      });
+    }
+
+    function closeModal() {
+      document.getElementById("admin-modal").style.display = "none";
+    }
+
+    // Publish New Announcement to Supabase
+    async function publishNews() {
+      const pass = document.getElementById("admin-pass").value;
+      const title = document.getElementById("post-title").value;
+      const category = document.getElementById("post-category").value;
+      const content = document.getElementById("post-content").value;
+
+      if (pass !== ADMIN_PASSWORD) {
+        alert("Incorrect admin password!");
+        return;
+      }
+
+      if (!title || !content) {
+        alert("Please fill in both the title and description.");
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from('announcements')
+        .insert([{ title, category: category || 'Update', content }]);
+
+      if (error) {
+        alert("Error creating patch note: " + error.message);
+      } else {
+        alert("Patch note successfully published!");
+        document.getElementById("admin-pass").value = "";
+        document.getElementById("post-title").value = "";
+        document.getElementById("post-category").value = "";
+        document.getElementById("post-content").value = "";
+        closeModal();
+        loadNews();
+      }
+    }
+
+    // Run Initializers
+    fetchServerStatus();
+    loadNews();
+  </script>
 </body>
 </html>
