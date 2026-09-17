@@ -301,7 +301,7 @@
   <section class="hero">
     <div class="badge">Minecraft Survival</div>
     <h1>LimitlessSMP</h1>
-    <p>Experience custom commands, and a community built around active gameplay with zero pay-to-win mechanics!</p>
+    <p>Experience custom mechanics, uncapped skills, and a community built around active gameplay with zero pay-to-win mechanics!</p>
 
     <!-- IP Copy Box -->
     <div class="ip-container">
@@ -343,15 +343,16 @@
   <!-- Secret Cheese Admin Modal -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal">
-      <h2>🧀 Admin News Publisher</h2>
-      <input type="password" id="admin-pass" placeholder="Secret Admin Password..." />
+      <h2>🧀 Admin Login & Publisher</h2>
+      <input type="email" id="admin-email" placeholder="Admin Email..." />
+      <input type="password" id="admin-pass" placeholder="Admin Password..." />
       <input type="text" id="post-title" placeholder="Patch Note Title" />
       <input type="text" id="post-category" placeholder="Category (e.g. Update, World, Fix)" />
       <textarea id="post-content" placeholder="Write post description here..."></textarea>
       
       <div class="modal-btns">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-        <button class="btn-submit" onclick="publishNews()">Publish</button>
+        <button class="btn-submit" onclick="publishNews()">Authenticate & Publish</button>
       </div>
     </div>
   </div>
@@ -361,18 +362,13 @@
   </footer>
 
   <script>
-    // 1. Supabase Connection Configuration
+    // Supabase Configuration
     const SUPABASE_URL = "https://sczdsjcgmkzzvcbjjhbe.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjemRzamNnbWt6enZjYmpqaGJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NDA5NzMsImV4cCI6MjEwNTExNjk3M30.zzcPes0qxlwn35D17wz86yfqP0GArnGqWqPD4LmQW5Q";
     
-    // Initialized using unique client name to prevent script crash
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Change this password anytime to protect publishing
-    const ADMIN_PASSWORD = "limitlessadmin"; 
     const SERVER_IP = "51.161.198.228:50122";
 
-    // IP Copy Function
     function copyIP() {
       navigator.clipboard.writeText(SERVER_IP);
       const btn = document.getElementById("copy-btn");
@@ -380,7 +376,6 @@
       setTimeout(() => { btn.innerText = "Copy IP"; }, 2000);
     }
 
-    // Live Server Status fetch via mcstatus.io
     async function fetchServerStatus() {
       const countElem = document.getElementById("player-count");
       const dotElem = document.getElementById("dot");
@@ -402,7 +397,6 @@
       }
     }
 
-    // Load Announcements from Supabase
     async function loadNews() {
       const newsGrid = document.getElementById("news-grid");
       
@@ -438,14 +432,12 @@
       }
     }
 
-    // 5-Click Cheese Easter Egg Listener
     let cheeseClicks = 0;
     const cheeseImg = document.getElementById('cheese-img');
 
     if (cheeseImg) {
       cheeseImg.addEventListener('click', () => {
         cheeseClicks++;
-        
         if (cheeseClicks === 5) {
           cheeseClicks = 0;
           document.getElementById("admin-modal").style.display = "flex";
@@ -457,29 +449,36 @@
       document.getElementById("admin-modal").style.display = "none";
     }
 
-    // Publish New Announcement to Supabase
     async function publishNews() {
-      const pass = document.getElementById("admin-pass").value;
+      const email = document.getElementById("admin-email").value;
+      const password = document.getElementById("admin-pass").value;
       const title = document.getElementById("post-title").value;
       const category = document.getElementById("post-category").value;
       const content = document.getElementById("post-content").value;
 
-      if (pass !== ADMIN_PASSWORD) {
-        alert("Incorrect admin password!");
+      if (!email || !password || !title || !content) {
+        alert("Please enter your admin credentials, title, and description.");
         return;
       }
 
-      if (!title || !content) {
-        alert("Please fill in both the title and description.");
+      // Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        alert("Authentication failed: " + authError.message);
         return;
       }
 
-      const { error } = await supabaseClient
+      // Insert announcement using authenticated session
+      const { error: insertError } = await supabaseClient
         .from('announcements')
         .insert([{ title, category: category || 'Update', content }]);
 
-      if (error) {
-        alert("Error creating patch note: " + error.message);
+      if (insertError) {
+        alert("Error creating patch note: " + insertError.message);
       } else {
         alert("Patch note successfully published!");
         document.getElementById("admin-pass").value = "";
@@ -489,9 +488,11 @@
         closeModal();
         loadNews();
       }
+
+      // Sign out to prevent session hijacking
+      await supabaseClient.auth.signOut();
     }
 
-    // Run Initializers
     fetchServerStatus();
     loadNews();
   </script>
